@@ -33,10 +33,6 @@ vector<char> remplirVecteurDesDirectionsPossibles(Labyrinthe& labyrinthe, Curseu
 //En considérant que le labyrinthe est un tableau 2D de caractères,
 // En considérant que le personage peut faire que haut,bas,gauche et droite 
 bool backtracking(Labyrinthe& labyrinthe, Curseur& curseur, int profondeur, string& chemin) {
-    if (profondeur > 1000) { // Limite de profondeur
-        cout << "Profondeur maximale atteinte, abandon de la recherche." << endl;
-        return false;
-    }
 
     if (curseur.getX() == get<0>(labyrinthe.getSortie()) && curseur.getY() == get<1>(labyrinthe.getSortie())) {
         cout << "Sortie trouvée à la position : [" << curseur.getX() << "," << curseur.getY() << "]" << endl;
@@ -106,6 +102,22 @@ int main() {
     cout<<"Labyrinthes chargés : Execution backtracking sans thread :"<<endl;
     cout<<"voici les labyrinthes"<<endl;
     afficherLabyrinthes(labyrinthes);
+
+    for (int i = 0; i < labyrinthes.size(); ++i) {
+        cout << "Résolution du " << i + 1 << "ème labyrinthe : " << endl;
+
+        Labyrinthe& labyrinthe = labyrinthes[i];
+        int x = get<0>(labyrinthe.getEntree());
+        int y = get<1>(labyrinthe.getEntree());
+        Curseur curseur(x, y);
+        string chemin = ""; // Chemin suivi
+        if (backtracking(labyrinthe, curseur, 0, chemin)) {
+            cout << "Chemin trouvé pour le labyrinthe " << i + 1 << " : " << chemin << endl;
+        } else {
+            cout << "Aucun chemin trouvé pour le labyrinthe " << i + 1 << "." << endl;
+        }
+    }
+
     return 0;
 }
 
