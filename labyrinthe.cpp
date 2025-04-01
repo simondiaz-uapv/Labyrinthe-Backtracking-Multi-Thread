@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <tuple>
+#include "cursor.cpp"
 using namespace std;
 
 class Labyrinthe {
@@ -26,21 +27,20 @@ public:
         cout<< "La sortie se trouve en : [" << get<0>(sortie) << "," << get<1>(sortie)<<"]" << endl;
         cout<< "L'entree se trouve en : [" << get<0>(entree) << "," << get<1>(entree)<<"]" << endl;
         cout << "Les objets se trouvent aux positions : " << endl;
-        for (const auto& obj : objets) {
+        for (const tuple<int,int> obj : objets) {
             cout << "Objet à la position : " << get<0>(obj) << "," << get<1>(obj) << endl;
         }
     }
 
     Labyrinthe(const vector<string>& lignes, const string& nomLabyrinthe) {
-        int minChiffre = 10; // Plus petit chiffre (initialisé à une valeur impossible)
-        int maxChiffre = -1; // Plus grand chiffre (initialisé à une valeur impossible)
+        int minChiffre = 10;
+        int maxChiffre = -1; 
         bool sortieTrouvee = false;
         for (int i = 0; i < 20; i++) {
             for (int j = 0; j < 20; j++) {
                 grille[i][j] = lignes[i][j];
 
-                // Vérifier si c'est un objet (lettre autre que 'M')
-                if (isalpha(grille[i][j]) && grille[i][j] != 'M' && grille[i][j] != 'A') {
+                if (isalpha(grille[i][j]) && grille[i][j] != 'M' && grille[i][j] != 'A' && grille[i][j] != 'D' && grille[i][j] != 'T') {
                     objets.push_back(make_tuple(i, j));
                 }
 
@@ -57,7 +57,10 @@ public:
                         sortieTrouvee = true;
                     }
                 }
-
+                // Vérifier si c'est la lettre 'D' pour le départ
+                if (grille[i][j] == 'D') {
+                    entree = make_tuple(i, j);
+                }
                 // Vérifier si c'est la lettre 'A' pour la sortie
                 if (grille[i][j] == 'A') {
                     sortie = make_tuple(i, j);
@@ -85,5 +88,39 @@ public:
     // Méthode pour afficher le nom (facultatif)
     void afficherNom() const {
         cout << "Nom du labyrinthe : " << nom << endl;
+    }
+
+    tuple<int,int> getEntree() const {
+        return entree;
+    }
+
+    tuple<int,int> getSortie() const {
+        return sortie;
+    }
+    vector<tuple<int,int>> getObjets() const {
+        return objets;
+    }
+
+    bool estJouable(int x, int y){
+        // Vérifier si la position est dans les limites du labyrinthe
+        if (x < 0 || x >= 20 || y < 0 || y >= 20) {
+            return false;
+        }
+        // Vérifier si la case n'est pas un mur
+        if (grille[x][y] == '#') {
+            return false;
+        }
+        // Vérifier si la case n'est pas un monstre
+        if (grille[x][y] == 'M') {
+            return false;
+        }
+        return true;
+    }
+    void marquerCase(int x, int y, bool visite) {
+        if (visite) {
+            grille[x][y] = 'V'; // Marquer comme visitée
+        } else {
+            grille[x][y] = ' '; // Réinitialiser la case
+        }
     }
 };
