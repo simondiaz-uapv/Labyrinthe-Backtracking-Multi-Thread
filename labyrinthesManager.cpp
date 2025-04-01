@@ -64,3 +64,11 @@ void afficherLabyrinthes(const vector<Labyrinthe>& labyrinthes) {
         cout << endl;
     }
 }
+
+void afficherLabyrinthesAvecCheminEnVert(const vector<Labyrinthe>& labyrinthes) {
+    for (Labyrinthe lab : labyrinthes) {
+        lab.afficherNom(); 
+        lab.AfficherLabyrintheAvecCheminEnVert();
+        cout <<"------------------------"<< endl;
+    }
+}

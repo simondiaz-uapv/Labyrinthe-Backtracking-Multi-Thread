@@ -3,7 +3,6 @@
 #include <vector>
 #include <string>
 #include <tuple>
-#include "cursor.cpp"
 using namespace std;
 
 class Labyrinthe {
@@ -28,7 +27,16 @@ public:
         cout<< "L'entree se trouve en : [" << get<0>(entree) << "," << get<1>(entree)<<"]" << endl;
         cout << "Les objets se trouvent aux positions : " << endl;
         for (const tuple<int,int> obj : objets) {
-            cout << "Objet à la position : " << get<0>(obj) << "," << get<1>(obj) << endl;
+            cout << "Objet a la position : " << get<0>(obj) << "," << get<1>(obj) << endl;
+        }
+    }
+
+    Labyrinthe() {
+        // Initialiser la grille avec des espaces vides
+        for (int i = 0; i < 20; i++) {
+            for (int j = 0; j < 20; j++) {
+                grille[i][j] = ' ';
+            }
         }
     }
 
@@ -36,6 +44,7 @@ public:
         int minChiffre = 10;
         int maxChiffre = -1; 
         bool sortieTrouvee = false;
+        bool entreeTrouvee = false;
         for (int i = 0; i < 20; i++) {
             for (int j = 0; j < 20; j++) {
                 grille[i][j] = lignes[i][j];
@@ -47,7 +56,7 @@ public:
                 // Vérifier si c'est un chiffre pour déterminer l'entrée et la sortie
                 if (isdigit(grille[i][j])) {
                     int chiffre = grille[i][j] - '0'; // Convertir le caractère en entier
-                    if (chiffre < minChiffre) {
+                    if (chiffre < minChiffre && !entreeTrouvee) {
                         minChiffre = chiffre;
                         entree = make_tuple(i, j); // Mettre à jour l'entrée
                     }
@@ -60,6 +69,7 @@ public:
                 // Vérifier si c'est la lettre 'D' pour le départ
                 if (grille[i][j] == 'D') {
                     entree = make_tuple(i, j);
+                    entreeTrouvee = true;
                 }
                 // Vérifier si c'est la lettre 'A' pour la sortie
                 if (grille[i][j] == 'A') {
@@ -70,11 +80,11 @@ public:
         }
 
         // Si aucune entrée ou sortie n'a été trouvée, lever une erreur
-        if (minChiffre == 10) {
-            throw runtime_error("Aucune entrée trouvée dans le labyrinthe.");
+        if (minChiffre == 10&& !entreeTrouvee) {
+            throw runtime_error("Aucune entrée trouvee dans le labyrinthe.");
         }
         if (!sortieTrouvee) {
-            throw runtime_error("Aucune sortie trouvée dans le labyrinthe.");
+            throw runtime_error("Aucune sortie trouvee dans le labyrinthe.");
         }
 
         nom = nomLabyrinthe; // Définir le nom du labyrinthe
@@ -101,6 +111,10 @@ public:
         return objets;
     }
 
+    char getCase(int x, int y) const {
+        return grille[x][y];
+    }
+
     bool estJouable(int x, int y){
         // Vérifier si la position est dans les limites du labyrinthe
         if (x < 0 || x >= 20 || y < 0 || y >= 20) {
@@ -114,13 +128,36 @@ public:
         if (grille[x][y] == 'M') {
             return false;
         }
+        if( grille[x][y] == '*') {
+            return false; 
+        }
         return true;
     }
-    void marquerCase(int x, int y, bool visite) {
-        if (visite) {
-            grille[x][y] = 'V'; // Marquer comme visitée
-        } else {
-            grille[x][y] = ' '; // Réinitialiser la case
+    void marquerCase(int x, int y, char symbole) {
+        grille[x][y] = symbole;
+    }
+    void AfficherLabyrintheAvecCheminEnVert() {
+        for (int i = 0; i < 20; i++) {
+            for (int j = 0; j < 20; j++) {
+                if (grille[i][j] == '*') {
+                    cout << "\033[32m" << grille[i][j] << "\033[0m "; // Afficher en vert
+                } else {
+                    cout << grille[i][j] << " ";
+                }
+            }
+            cout << endl;
         }
+    }
+    void copierCasesVisitees(const Labyrinthe& autreLabyrinthe) {
+        for (int i = 0; i < 20; i++) {
+            for (int j = 0; j < 20; j++) {
+                if (autreLabyrinthe.grille[i][j] == '*') {
+                    grille[i][j] = '*'; // Copier les cases visitées
+                }
+            }
+        }
+    }
+    string getNom() const {
+        return nom;
     }
 };
