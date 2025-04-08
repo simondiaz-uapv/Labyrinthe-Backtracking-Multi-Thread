@@ -11,6 +11,7 @@ private:
     char grille[20][20];
     string nom; // Nom du labyrinthe
     vector<tuple<int, int>> objets; // Positions des objets (lettres autres que M)
+    vector<char> objetsARecuperer; // Objets à récupérer
     tuple<int, int> entree; // Position de l'entrée (plus petit chiffre)
     tuple<int, int> sortie; // Position de la sortie (plus grand chiffre ou 'A')
 public:
@@ -51,6 +52,7 @@ public:
 
                 if (isalpha(grille[i][j]) && grille[i][j] != 'M' && grille[i][j] != 'A' && grille[i][j] != 'D' && grille[i][j] != 'T') {
                     objets.push_back(make_tuple(i, j));
+                    objetsARecuperer.push_back(grille[i][j]); 
                 }
 
                 // Vérifier si c'est un chiffre pour déterminer l'entrée et la sortie
@@ -152,12 +154,19 @@ public:
         for (int i = 0; i < 20; i++) {
             for (int j = 0; j < 20; j++) {
                 if (autreLabyrinthe.grille[i][j] == '*') {
-                    grille[i][j] = '*'; // Copier les cases visitées
+                    grille[i][j] = '*'; 
+                }
+                if(autreLabyrinthe.grille[i][j] == 'T') {
+                    grille[i][j] = ' '; 
                 }
             }
         }
     }
     string getNom() const {
         return nom;
+    }
+
+    vector<char> getObjetsARecuperer() const {
+        return objetsARecuperer;
     }
 };
