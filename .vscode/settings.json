@@ -46,5 +46,6 @@
         "thread": "cpp",
         "typeinfo": "cpp",
         "codecvt": "cpp"
-    }
+    },
+    "C_Cpp.errorSquiggles": "enabled"
 }

@@ -1,7 +1,6 @@
 //Fichier qui répertorie les fonctions de créations et affichage des labyrinthes
 #include <iostream>
 #include <vector>
-#include <thread>
 #include "labyrinthe.cpp"
 
 using namespace std;
@@ -21,7 +20,6 @@ vector<Labyrinthe> chargerLabyrinthes(const string& cheminFichier) {
 
     while (getline(fichier, ligne)) {
         if (ligne.find('#') == string::npos) {
-            // Ligne vide ou non pertinente, ignorer
             continue;
         }
 
