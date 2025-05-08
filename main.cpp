@@ -104,12 +104,17 @@ bool backtracking(Labyrinthe& labyrinthe, int x, int y, string& chemin, Labyrint
 }
 
 
+/**
+ * @brief Fonction de resolution sequentielle des labyrinthes.
+ * 
+ * @param labyrinthes 
+ */
 void resolutionSequentielle(vector<Labyrinthe>& labyrinthes) {
     cout << "Execution de la methode sequentielle..." << endl;
     int indexLabyrinthePrime = -4;
     for (int i = 0; i < labyrinthes.size(); i++) {
         if (i == indexLabyrinthePrime) {
-            continue; // Passer le labyrinthe "prime"
+            continue;
         }
 
         Labyrinthe& labyrinthe = labyrinthes[i];
@@ -126,13 +131,20 @@ void resolutionSequentielle(vector<Labyrinthe>& labyrinthes) {
         string chemin = "";
 
         if (backtracking(labyrinthe, x, y, chemin, labyrinthePrime)) {
-            labyrinthe.AfficherLabyrintheAvecCheminEnVert();
+           // labyrinthe.AfficherLabyrintheAvecCheminEnVert();
         } else {
             cout << "Aucun chemin trouve." << endl;
         }
+        
     }
 }
 
+/**
+ * @brief Fonction de resolution avec un thread par direction possible.
+ * 
+ * @param labyrinthe 
+ * @param labyrinthePrime 
+ */
 void resolutionThreadParDirection(Labyrinthe& labyrinthe, Labyrinthe* labyrinthePrime) {
     cout << "Execution de la methode avec un thread par direction possible..." << endl;
 
@@ -153,11 +165,20 @@ void resolutionThreadParDirection(Labyrinthe& labyrinthe, Labyrinthe* labyrinthe
                 case 'D': newY++; chemin += 'D'; break;
             }
 
-            if (backtracking(labyrinthe, newX, newY, chemin, labyrinthePrime)) {
-                labyrinthe.AfficherLabyrintheAvecCheminEnVert();
-            } else {
-                cout << "Aucun chemin trouve pour la direction " << direction << "." << endl;
+            // Si on tombe sur une TNT, on passe au labyrinthePrime
+            if (labyrinthe.getCase(newX, newY) == 'T' && labyrinthePrime) {
+                const vector<char>& objetsARecuperer = labyrinthe.getObjetsARecuperer();
+                if (all_of(objetsARecuperer.begin(), objetsARecuperer.end(), [](char obj) {
+                    return find(objetRecoltes.begin(), objetRecoltes.end(), obj) != objetRecoltes.end();
+                })) {
+                    cout << "LabyrinthePrime trouve et tous les objets collectes !" << endl;
+                    labyrinthePrime->copierCasesVisitees(labyrinthe);
+                    backtracking(*labyrinthePrime, newX, newY, chemin, nullptr);
+                }
             }
+            if (backtracking(labyrinthe, newX, newY, chemin, labyrinthePrime)) {
+                cout<<"Sortie trouvee dans la direction " << endl;
+            } 
         });
     }
 
@@ -166,6 +187,11 @@ void resolutionThreadParDirection(Labyrinthe& labyrinthe, Labyrinthe* labyrinthe
     }
 }
 
+/**
+ * @brief Fonction de resolution avec un thread par labyrinthe.
+ * 
+ * @param labyrinthes 
+ */
 void resolutionThreadParLabyrinthe(vector<Labyrinthe>& labyrinthes) {
     cout << "Execution de la methode avec un thread par labyrinthe..." << endl;
 
@@ -180,16 +206,13 @@ void resolutionThreadParLabyrinthe(vector<Labyrinthe>& labyrinthes) {
             i++; // Sauter le labyrinthe "prime" dans la boucle principale
         }
 
+        // Créer un thread pour chaque labyrinthe
         threads.emplace_back([&, i, labyrinthePrime]() {
             int x = get<0>(labyrinthes[i].getEntree());
             int y = get<1>(labyrinthes[i].getEntree());
             string chemin = "";
 
-            if (backtracking(labyrinthes[i], x, y, chemin, labyrinthePrime)) {
-                labyrinthes[i].AfficherLabyrintheAvecCheminEnVert();
-            } else {
-                cout << "Aucun chemin trouve pour le labyrinthe " << labyrinthes[i].getNom() << "." << endl;
-            }
+            backtracking(labyrinthes[i], x, y, chemin, labyrinthePrime);
         });
     }
 
@@ -242,6 +265,11 @@ int main() {
     cout << "Objets collectes :" << endl;
     for (char obj : objetRecoltes) {
         cout << obj << " ";
+    }
+    cout << endl;
+
+    for(int i = 0 ; i < labyrinthes.size(); i++) {
+        labyrinthes[i].AfficherLabyrintheAvecCheminEnVert();
     }
     return 0;
 }
