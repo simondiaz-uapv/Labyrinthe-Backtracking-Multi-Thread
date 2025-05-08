@@ -117,6 +117,14 @@ public:
         return grille[x][y];
     }
 
+    /**
+     * @brief Vérifie si une case est jouable (pas un mur ou un monstre).
+     * 
+     * @param x 
+     * @param y 
+     * @return true 
+     * @return false 
+     */
     bool estJouable(int x, int y){
         // Vérifier si la position est dans les limites du labyrinthe
         if (x < 0 || x >= 20 || y < 0 || y >= 20) {

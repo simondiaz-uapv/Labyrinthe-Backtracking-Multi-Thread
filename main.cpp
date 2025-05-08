@@ -3,67 +3,79 @@
 #include <algorithm>
 #include <chrono>
 #include <thread>
+#include <mutex>
 #include "labyrinthesManager.cpp"
+#include <unordered_map> // bibliothèque pour unordered_map qui permet de stocker les labyrinthes "Prime"
 
 using namespace std;
-
-vector<char> objetRecoltes ;
+unordered_map<string, Labyrinthe*> transitionsTNT; // map clé-valeur pour stocker les labyrinthes "Prime"
+vector<char> objetRecoltes;
+mutex mutexObjets;// Mutex pour protéger l'accès à la liste des objets récoltés
 
 /**
- * @brief Remplit un vecteur avec les directions possibles à partir de la position actuelle.
+ * @brief Remplit un vecteur avec les directions possibles à partir d'une position donnée dans le labyrinthe.
+ * 
+ * @param labyrinthe 
+ * @param x 
+ * @param y 
+ * @return vector<char> 
  */
 vector<char> remplirVecteurDesDirectionsPossibles(Labyrinthe& labyrinthe, int x, int y) {
     vector<char> v;
-
-    if (labyrinthe.estJouable(x - 1, y) && labyrinthe.getCase(x - 1, y) != '*') v.push_back('H'); // Haut
-    if (labyrinthe.estJouable(x + 1, y) && labyrinthe.getCase(x + 1, y) != '*') v.push_back('B'); // Bas
-    if (labyrinthe.estJouable(x, y - 1) && labyrinthe.getCase(x, y - 1) != '*') v.push_back('G'); // Gauche
-    if (labyrinthe.estJouable(x, y + 1) && labyrinthe.getCase(x, y + 1) != '*') v.push_back('D'); // Droite
-
+    if (labyrinthe.estJouable(x - 1, y) && labyrinthe.getCase(x - 1, y) != '*') v.push_back('H');
+    if (labyrinthe.estJouable(x + 1, y) && labyrinthe.getCase(x + 1, y) != '*') v.push_back('B');
+    if (labyrinthe.estJouable(x, y - 1) && labyrinthe.getCase(x, y - 1) != '*') v.push_back('G');
+    if (labyrinthe.estJouable(x, y + 1) && labyrinthe.getCase(x, y + 1) != '*') v.push_back('D');
     return v;
 }
 
 /**
- * @brief Algorithme de backtracking pour resoudre le labyrinthe.
+ * @brief Fonction de backtracking pour résoudre le labyrinthe.
+ * 
+ * @param labyrinthe 
+ * @param x 
+ * @param y 
+ * @param chemin 
+ * @param transitionsTNT 
+ * @return true 
+ * @return false 
+ * 
  */
-bool backtracking(Labyrinthe& labyrinthe, int x, int y, string& chemin, Labyrinthe* labyrinthePrime = nullptr) {
-    // Verifier si c'est la sortie
+bool backtracking(Labyrinthe& labyrinthe, int x, int y, string& chemin, unordered_map<string, Labyrinthe*>* transitionsTNT){
     if (x == get<0>(labyrinthe.getSortie()) && y == get<1>(labyrinthe.getSortie())) {
         const vector<char>& objetsARecuperer = labyrinthe.getObjetsARecuperer();
+
+        // Vérifier si tous les objets nécessaires ont été collectés
         if (all_of(objetsARecuperer.begin(), objetsARecuperer.end(), [](char obj) {
+            lock_guard<mutex> lock(mutexObjets);
             return find(objetRecoltes.begin(), objetRecoltes.end(), obj) != objetRecoltes.end();
         })) {
-            cout << "Tous les objets necessaires ont ete collectes. Sortie trouvee à la position : [" << x << "," << y << "]" << endl;
+            cout << "Tous les objets necessaires ont ete collectes. Sortie trouvee a la position : [" << x << "," << y << "]" << endl;
             return true;
-        } 
+        }
     }
 
-    // Verifier si la case est un mur, dejà visitee ou infranchissable
+    //Vérifier si la case est un mur ou un monstre
     if (labyrinthe.getCase(x, y) == '*' || labyrinthe.getCase(x, y) == '#') {
         return false;
     }
 
-    // Collecter l'objet si present sur la case
     char caseOriginale = labyrinthe.getCase(x, y);
     bool objetCollecte = false;
+    // Vérifier si la case est un objet à récolter
     if (isalpha(caseOriginale) && caseOriginale != 'M' && caseOriginale != 'A' && caseOriginale != 'D' && caseOriginale != 'T') {
+        lock_guard<mutex> lock(mutexObjets);
         if (find(objetRecoltes.begin(), objetRecoltes.end(), caseOriginale) == objetRecoltes.end()) {
             objetRecoltes.push_back(caseOriginale);
-            objetCollecte = true; // Marquer que l'objet a ete collecte
+            objetCollecte = true;
         }
     }
 
-    // Marquer la case actuelle comme visitee
     labyrinthe.marquerCase(x, y, '*');
-
-    // Obtenir les directions possibles
     vector<char> directions = remplirVecteurDesDirectionsPossibles(labyrinthe, x, y);
 
-    // Explorer chaque direction
     for (char direction : directions) {
         int newX = x, newY = y;
-
-        // Deplacer en fonction de la direction
         switch (direction) {
             case 'H': newX--; chemin += 'H'; break;
             case 'B': newX++; chemin += 'B'; break;
@@ -71,81 +83,108 @@ bool backtracking(Labyrinthe& labyrinthe, int x, int y, string& chemin, Labyrint
             case 'D': newY++; chemin += 'D'; break;
         }
 
-        // Si on tombe sur une TNT, on passe au labyrinthePrime
-        if (labyrinthe.getCase(newX, newY) == 'T' && labyrinthePrime) {
-            const vector<char>& objetsARecuperer = labyrinthe.getObjetsARecuperer();
-            if (all_of(objetsARecuperer.begin(), objetsARecuperer.end(), [](char obj) {
-                return find(objetRecoltes.begin(), objetRecoltes.end(), obj) != objetRecoltes.end();
-            })) {
-                cout << "LabyrinthePrime trouve et tous les objets collectes !" << endl;
-                labyrinthePrime->copierCasesVisitees(labyrinthe);
-                if (backtracking(*labyrinthePrime, newX, newY, chemin, nullptr)) {
-                    labyrinthePrime->AfficherLabyrintheAvecCheminEnVert();
-                    return true;
+        // On est sur un tnt on passe a la version "Prime"
+        if (labyrinthe.getCase(newX, newY) == 'T' && transitionsTNT) {
+            Labyrinthe* nextPrime = (*transitionsTNT)[labyrinthe.getNom()];
+            if (nextPrime) {
+                const vector<char>& objetsARecuperer = labyrinthe.getObjetsARecuperer();
+                if (all_of(objetsARecuperer.begin(), objetsARecuperer.end(), [](char obj) {
+                    lock_guard<mutex> lock(mutexObjets);
+                    return find(objetRecoltes.begin(), objetRecoltes.end(), obj) != objetRecoltes.end();
+                })) {
+                    nextPrime->copierCasesVisitees(labyrinthe);
+                    if (backtracking(*nextPrime, newX, newY, chemin, transitionsTNT)) {
+                        return true;
+                    }
                 }
             }
         }
-
-        if (backtracking(labyrinthe, newX, newY, chemin, labyrinthePrime)) return true;
-
-        // Revenir en arrière
+        if (backtracking(labyrinthe, newX, newY, chemin, transitionsTNT)) return true;
         chemin.pop_back();
     }
-
-    // Reinitialiser la case
+    // On retourne en arriere donc on remet la case d'origine
+    // et on retire l'objet de la liste des objets récoltés si c'était un objet
     labyrinthe.marquerCase(x, y, caseOriginale);
-
-    // Si un objet a ete collecte sur cette case, le retirer
     if (objetCollecte) {
-        objetRecoltes.pop_back();
+        lock_guard<mutex> lock(mutexObjets);
+        objetRecoltes.erase(remove(objetRecoltes.begin(), objetRecoltes.end(), caseOriginale), objetRecoltes.end());
     }
-
     return false;
 }
 
 
 /**
- * @brief Fonction de resolution sequentielle des labyrinthes.
+ * @brief Fonction de résolution séquentielle des labyrinthes.
  * 
  * @param labyrinthes 
  */
 void resolutionSequentielle(vector<Labyrinthe>& labyrinthes) {
     cout << "Execution de la methode sequentielle..." << endl;
-    int indexLabyrinthePrime = -4;
-    for (int i = 0; i < labyrinthes.size(); i++) {
-        if (i == indexLabyrinthePrime) {
-            continue;
-        }
-
-        Labyrinthe& labyrinthe = labyrinthes[i];
+    for (Labyrinthe& labyrinthe : labyrinthes) {
+        if (labyrinthe.getNom().find("Prime") != string::npos) continue;
         cout << "Resolution du labyrinthe " << labyrinthe.getNom() << " :" << endl;
-        Labyrinthe* labyrinthePrime = nullptr;
-
-        if (i + 1 < labyrinthes.size() && labyrinthes[i + 1].getNom() == labyrinthe.getNom() + "Prime") {
-            labyrinthePrime = &labyrinthes[i + 1];
-            indexLabyrinthePrime = i + 1;
-        }
-
         int x = get<0>(labyrinthe.getEntree());
         int y = get<1>(labyrinthe.getEntree());
         string chemin = "";
-
-        if (backtracking(labyrinthe, x, y, chemin, labyrinthePrime)) {
-           // labyrinthe.AfficherLabyrintheAvecCheminEnVert();
-        } else {
+        if (!backtracking(labyrinthe, x, y, chemin, &transitionsTNT)) {
             cout << "Aucun chemin trouve." << endl;
         }
-        
     }
 }
 
 /**
- * @brief Fonction de resolution avec un thread par direction possible.
+ * @brief Fonction de résolution avec un thread par labyrinthe.
+ * 
+ * @param labyrinthes 
+ * @param transitionsTNT 
+ */
+void resolutionThreadParLabyrinthe(vector<Labyrinthe>& labyrinthes, unordered_map<string, Labyrinthe*>& transitionsTNT) {
+    cout << "Execution de la methode avec un thread par labyrinthe..." << endl;
+    vector<thread> threads;
+
+    for (Labyrinthe& labyrinthe : labyrinthes) {
+        if (labyrinthe.getNom().find("Prime") != string::npos) continue;
+
+        // Créer un thread pour chaque labyrinthe
+        threads.emplace_back([&labyrinthe, &transitionsTNT]() {
+            int x = get<0>(labyrinthe.getEntree());
+            int y = get<1>(labyrinthe.getEntree());
+            string chemin = "";
+
+            Labyrinthe* labyrinthePrime = nullptr;
+            // Vérifier si le labyrinthe a une version "Prime"
+            auto it = transitionsTNT.find(labyrinthe.getNom());
+            if (it != transitionsTNT.end()) {
+                labyrinthePrime = it->second;
+            }
+            // Vérifier si le labyrinthe est "Prime" si oui on lance le backtracking sur le labyrinthe "Prime"
+            if (labyrinthePrime) {
+                const vector<char>& objetsARecuperer = labyrinthe.getObjetsARecuperer();
+                if (all_of(objetsARecuperer.begin(), objetsARecuperer.end(), [](char obj) {
+                    lock_guard<mutex> lock(mutexObjets);
+                    return find(objetRecoltes.begin(), objetRecoltes.end(), obj) != objetRecoltes.end();
+                })) {
+                    labyrinthePrime->copierCasesVisitees(labyrinthe);
+                    backtracking(*labyrinthePrime, x, y, chemin, &transitionsTNT);
+                    return;
+                }
+            }
+            // Lancer le backtracking sur le labyrinthe courant
+            backtracking(labyrinthe, x, y, chemin, &transitionsTNT);
+        });
+    }
+    // Attendre la fin de tous les threads
+
+    for (auto& t : threads) t.join();
+}
+
+/**
+ * @brief Fonction de résolution avec un thread par direction possible.
  * 
  * @param labyrinthe 
- * @param labyrinthePrime 
+ * @param transitionsTNT 
  */
-void resolutionThreadParDirection(Labyrinthe& labyrinthe, Labyrinthe* labyrinthePrime) {
+void resolutionThreadParDirection(Labyrinthe& labyrinthe, unordered_map<string, Labyrinthe*>& transitionsTNT) {
     cout << "Execution de la methode avec un thread par direction possible..." << endl;
 
     int x = get<0>(labyrinthe.getEntree());
@@ -153,7 +192,7 @@ void resolutionThreadParDirection(Labyrinthe& labyrinthe, Labyrinthe* labyrinthe
     vector<char> directions = remplirVecteurDesDirectionsPossibles(labyrinthe, x, y);
     vector<thread> threads;
     for (char direction : directions) {
-        // Créer un thread pour chaque direction
+        // Créer un thread pour chaque direction possible
         threads.emplace_back([&, direction]() {
             int newX = x, newY = y;
             string chemin = "";
@@ -165,65 +204,45 @@ void resolutionThreadParDirection(Labyrinthe& labyrinthe, Labyrinthe* labyrinthe
                 case 'D': newY++; chemin += 'D'; break;
             }
 
-            // Si on tombe sur une TNT, on passe au labyrinthePrime
+            Labyrinthe* labyrinthePrime = nullptr;
+            auto it = transitionsTNT.find(labyrinthe.getNom());
+            // Vérifier si le labyrinthe a une version "Prime"
+            if (it != transitionsTNT.end()) {
+                labyrinthePrime = it->second;
+            }
+
+            // Vérifier si le labyrinthe on passe à un labyrinthe "Prime"
             if (labyrinthe.getCase(newX, newY) == 'T' && labyrinthePrime) {
                 const vector<char>& objetsARecuperer = labyrinthe.getObjetsARecuperer();
                 if (all_of(objetsARecuperer.begin(), objetsARecuperer.end(), [](char obj) {
+                    lock_guard<mutex> lock(mutexObjets);
                     return find(objetRecoltes.begin(), objetRecoltes.end(), obj) != objetRecoltes.end();
                 })) {
                     cout << "LabyrinthePrime trouve et tous les objets collectes !" << endl;
                     labyrinthePrime->copierCasesVisitees(labyrinthe);
                     backtracking(*labyrinthePrime, newX, newY, chemin, nullptr);
+                    return;
                 }
             }
-            if (backtracking(labyrinthe, newX, newY, chemin, labyrinthePrime)) {
-                cout<<"Sortie trouvee dans la direction " << endl;
-            } 
+            // Lancer le backtracking sur le labyrinthe courant
+            if (backtracking(labyrinthe, newX, newY, chemin, labyrinthePrime ? &transitionsTNT : nullptr)) {
+                cout << "Sortie trouvee dans la direction " << direction << " !" << endl;
+            }
         });
     }
 
+    // Attendre la fin de tous les threads
     for (auto& t : threads) {
         t.join();
     }
 }
 
-/**
- * @brief Fonction de resolution avec un thread par labyrinthe.
- * 
- * @param labyrinthes 
- */
-void resolutionThreadParLabyrinthe(vector<Labyrinthe>& labyrinthes) {
-    cout << "Execution de la methode avec un thread par labyrinthe..." << endl;
 
-    vector<thread> threads;
-
-    for (int i = 0; i < labyrinthes.size(); i++) {
-        Labyrinthe& labyrinthe = labyrinthes[i];
-        Labyrinthe* labyrinthePrime = nullptr;
-
-        if (i + 1 < labyrinthes.size() && labyrinthes[i + 1].getNom() == labyrinthe.getNom() + "Prime") {
-            labyrinthePrime = &labyrinthes[i + 1];
-            i++; // Sauter le labyrinthe "prime" dans la boucle principale
-        }
-
-        // Créer un thread pour chaque labyrinthe
-        threads.emplace_back([&, i, labyrinthePrime]() {
-            int x = get<0>(labyrinthes[i].getEntree());
-            int y = get<1>(labyrinthes[i].getEntree());
-            string chemin = "";
-
-            backtracking(labyrinthes[i], x, y, chemin, labyrinthePrime);
-        });
-    }
-
-    for (auto& t : threads) {
-        t.join();
-    }
-}
 
 int main() {
     string cheminFichier = "labyrinthe.txt";
-    vector<Labyrinthe> labyrinthes = chargerLabyrinthes(cheminFichier); 
+    vector<Labyrinthe> labyrinthes = chargerLabyrinthes(cheminFichier);
+    preparerTransitionsTNT(labyrinthes, transitionsTNT);
 
     cout << "Choisissez une methode de resolution :" << endl;
     cout << "1. Methode sequentielle" << endl;
@@ -241,17 +260,14 @@ int main() {
             resolutionSequentielle(labyrinthes);
             break;
         case 2:
-            for (int i = 0; i < labyrinthes.size(); i++) {
-                Labyrinthe* labyrinthePrime = nullptr;
-                if (i + 1 < labyrinthes.size() && labyrinthes[i + 1].getNom() == labyrinthes[i].getNom() + "Prime") {
-                    labyrinthePrime = &labyrinthes[i + 1];
-                    i++; // Sauter le labyrinthe "prime"
+            for (Labyrinthe& lab : labyrinthes) {
+                if (!(lab.getNom().size() >= 5 && lab.getNom().substr(lab.getNom().size() - 5) == "Prime")) {
+                    resolutionThreadParDirection(lab, transitionsTNT);
                 }
-                resolutionThreadParDirection(labyrinthes[i], labyrinthePrime);
             }
             break;
         case 3:
-            resolutionThreadParLabyrinthe(labyrinthes);
+            resolutionThreadParLabyrinthe(labyrinthes, transitionsTNT);
             break;
         default:
             cout << "Choix invalide." << endl;
@@ -268,8 +284,8 @@ int main() {
     }
     cout << endl;
 
-    for(int i = 0 ; i < labyrinthes.size(); i++) {
-        labyrinthes[i].AfficherLabyrintheAvecCheminEnVert();
+    for (Labyrinthe& lab : labyrinthes) {
+        lab.AfficherLabyrintheAvecCheminEnVert();
     }
     return 0;
 }

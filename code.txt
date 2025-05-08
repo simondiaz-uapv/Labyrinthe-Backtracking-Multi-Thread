@@ -1,0 +1,6 @@
+C'est quoi all_of ?
+all_of est une fonction de la bibliothèque standard C++ qui permet de vérifier si tous les éléments d'une séquence satisfont une condition donnée. Elle
+prend en entrée une plage d'itérateurs (comme un vecteur) et une fonction prédicat. Si tous les éléments de la plage satisfont la condition, elle renvoie true, sinon false.
+Dans ce cas, elle est utilisée pour vérifier si tous les objets nécessaires ont été collectés avant de permettre la sortie du labyrinthe.
+
+Unordered_map me permet de lier un nom de labyrinthe à un objet Labyrinthe. Cela permet d'accéder rapidement à un labyrinthe en utilisant son nom comme clé.
